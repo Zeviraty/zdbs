@@ -6,7 +6,7 @@ import os
 
 def get_config(key:str) -> dict:
     """Get a value from specified key in the config"""
-    if not path.endswith(".toml"):
+    if not os.path.endswith(".toml"):
         return {}
     y = toml.loads(open("zdbs.toml", 'r').read())
 
