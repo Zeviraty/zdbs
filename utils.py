@@ -49,7 +49,7 @@ def backup_db():
     """Create a backup of the database"""
     if os.path.exists(get_config("db_folder")):
         dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-        shutil.copy(get_config("db_folder"), os.path.join(get_config("db_folder"),f"backups/{dt_string}.db"))
+        shutil.copy(os.path.join(get_config("db_folder"),"database.db"), os.path.join(get_config("db_folder"),f"backups/{dt_string}.db"))
 
 def get() -> sqlite3.Connection:
     """Get a database connection"""
