@@ -54,7 +54,7 @@ def backup_db():
 
 def get() -> sqlite3.Connection:
     """Get a database connection"""
-    return sqlite3.connect(get_config("db_folder"), timeout=100.0)
+    return sqlite3.connect(os.path.join(get_config("db_folder"),"database.db"), timeout=100.0)
 
 def get_latest_backup():
     """Get the latest backup from the backup folder"""
