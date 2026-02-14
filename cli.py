@@ -1,9 +1,7 @@
-import sqlite3
-from datetime import datetime
 import shutil,os
 import click
 from trogon import tui
-from utils import *
+from tome.db.utils import backup_db, get, init_db, get_latest_backup, resolve_schema_path
 
 @tui()
 @click.group()
@@ -14,6 +12,9 @@ def cli():
 @cli.command()
 @click.option("--force", is_flag=True, help="Force destructive action.")
 def full_init(force) -> None:
+    '''
+    Fully initialize the database
+    '''
     if os.path.exists("db/database.db") and not force:
         yn = input("This is destructive do you want to do this? (y/N): ")
         if yn.lower() != "y":
@@ -56,6 +57,9 @@ CREATE TABLE IF NOT EXISTS migration_errors (
 
 @cli.command()
 def backup():
+    '''
+    backup the database
+    '''
     click.echo("Starting backup...")
     backup_db()
     click.echo("Created backup!")
@@ -63,6 +67,9 @@ def backup():
 @cli.command()
 @click.argument('date')
 def revert(date):
+    '''
+    Revert to backup at date
+    '''
     dobackup = input("Do you want to backup now? Y/n: ")
 
     last = get_latest_backup()
@@ -85,20 +92,31 @@ def revert(date):
 
 @cli.command()
 def init():
+    '''
+    Initialize the database
+    '''
     init_db(True,True)
 
 @cli.group()
 def schema():
     """Schema management"""
+    pass
 
 @schema.command()
 @click.argument("schema")
 @click.option("--force", is_flag=True, help="Force apply even if already applied.")
 def apply(schema,force):
+    '''
+    Apply a schema
+    '''
     try:
         path = resolve_schema_path(schema)
     except Exception as e:
         click.echo(f"Schema resolution error: {e}")
+        return
+
+    if path is None:
+        click.echo("Path is None")
         return
 
     if not os.path.exists(path):
@@ -144,6 +162,9 @@ def apply(schema,force):
 @click.argument("schema")
 @click.argument("name")
 def new(schema, name):
+    '''
+    Create the files for a new schema
+    '''
     folder, number = schema.split(".")
     filename = f"{number}-{name}.sql"
     down_filename = f"{number}-{name}.down.sql"
@@ -209,6 +230,10 @@ def rollback(schema):
         down_path = resolve_schema_path(schema,ext="down.sql")
     except Exception as e:
         click.echo(f"Schema resolution error: {e}")
+        return
+
+    if down_path is None:
+        click.echo("down_path is None")
         return
 
     if not os.path.exists(down_path):
@@ -284,6 +309,9 @@ def clear_errors():
 @cli.command()
 @click.argument("table")
 def table(table):
+    '''
+    Show data of table
+    '''
     conn = get()
     data = conn.execute(f"PRAGMA table_info({table});").fetchall()
     if len(data) == 0:
@@ -298,7 +326,7 @@ def table(table):
     print(f"id{' '*(maxlen_id-2)}|name{' '*(maxlen_name-4)}|type{' '*(maxlen_type-4)}|nn{' '*(maxlen_nn-2)}|")
     print(f"--{'-'*(maxlen_id-2)}|----{'-'*(maxlen_name-4)}|----{'-'*(maxlen_type-4)}|--{'-'*(maxlen_nn-2)}|")
     for item in data:
-        print(f"id{' ' * (maxlen_id - 2)}|name{' ' * (maxlen_name - 4)}|type{' ' * (maxlen_type - 4)}|nn{' ' * (maxlen_nn - 2)}|")
+        print(f"{item[0]}{' ' * (maxlen_id - len(str(item[0]))+1)}|{item[1]}{' ' * (maxlen_name - len(item[1]))}|{item[2]}{' ' * (maxlen_type - len(item[2]))}|{item[3]}{' ' * (maxlen_nn - len(str(item[3]))+1)}|")
 
 if __name__ == '__main__':
     cli()
