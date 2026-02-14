@@ -16,16 +16,21 @@ def get_config(key:str) -> dict:
 
 class ConfigError(Exception):
     """Configuration error for when a key is not found"""
-    def __init__(self,key:str=None):
+    def __init__(self,key:str|None=None):
         if key == None:
             super().__init__("Unspecified config error")
         else:
             super().__init__(f"Error while getting config key: {key}")
 
+DB_FOLDER = str(get_config("db_folder"))
+
+if type(DB_FOLDER) != str:
+    raise ConfigError("db_folder")
+
 def resolve_schema_path(schema_name, base_path=None, ext=".sql"):
     """Convert schema name like 'test.001' into a path like 'db/schemas/test/001-*.sql'."""
     if base_path == None:
-        base_path = os.path.join(get_config("db_folder"),f"schemas/") 
+        base_path = os.path.join(DB_FOLDER,f"schemas/") 
     parts = schema_name.split(".")
     if len(parts) != 2:
         raise ValueError(f"Invalid schema name format: '{schema_name}'. Use format 'folder.number'.")
@@ -48,20 +53,20 @@ def resolve_schema_path(schema_name, base_path=None, ext=".sql"):
 
 def backup_db():
     """Create a backup of the database"""
-    if os.path.exists(get_config("db_folder")):
+    if os.path.exists(DB_FOLDER):
         dt_string = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-        shutil.copy(os.path.join(get_config("db_folder"),"database.db"), os.path.join(get_config("db_folder"),f"backups/{dt_string}.db"))
+        shutil.copy(os.path.join(DB_FOLDER,"database.db"), os.path.join(DB_FOLDER,f"backups/{dt_string}.db"))
 
 def get() -> sqlite3.Connection:
     """Get a database connection"""
-    return sqlite3.connect(os.path.join(get_config("db_folder"),"database.db"), timeout=100.0)
+    return sqlite3.connect(os.path.join(DB_FOLDER,"database.db"), timeout=100.0)
 
 def get_latest_backup():
     """Get the latest backup from the backup folder"""
     datetime_format = "%d-%m-%Y_%H-%M-%S"
     backups = []
 
-    for filename in os.listdir(os.path.join(get_config("db_folder"),f"backups/")):
+    for filename in os.listdir(os.path.join(DB_FOLDER,f"backups/")):
         if filename.endswith(".db"):
             dt_str = filename[:-3]
             try:
@@ -92,7 +97,7 @@ def init_db(dobackup=True, clickecho=False):
     applied = {row[0] for row in cursor.fetchall()}
     conn.close()
 
-    for root, _, files in os.walk(os.path.join(get_config("db_folder"),f"schemas/")):
+    for root, _, files in os.walk(os.path.join(DB_FOLDER,f"schemas/")):
         dirname = os.path.basename(root)
 
         files.sort()
@@ -101,7 +106,7 @@ def init_db(dobackup=True, clickecho=False):
             if not schema.endswith(".sql"):
                 continue
             schema_name = schema.replace(".sql", "")
-            schema_path = os.path.join(get_config("db_folder"),f"schemas/")+dirname+"/"+schema_name+".sql"
+            schema_path = os.path.join(DB_FOLDER,f"schemas/")+dirname+"/"+schema_name+".sql"
             display_name = f"{dirname}.{schema_name}" if dirname != "schemas" else schema_name
 
             if display_name in applied:
